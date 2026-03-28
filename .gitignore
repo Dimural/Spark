@@ -5,3 +5,6 @@ out
 .DS_Store
 SPARK_CONTEXT.md
 .env.local
+agent/.venv
+agent/__pycache__
+agent/.pytest_cache
