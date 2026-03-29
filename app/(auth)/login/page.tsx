@@ -125,8 +125,8 @@ export default function LoginPage() {
           </div>
         ) : null}
 
-        <Link className="auth-link" href="/dashboard">
-          Go to dashboard shell
+        <Link className="auth-link" href="/onboarding">
+          Continue to onboarding
         </Link>
       </section>
     </main>

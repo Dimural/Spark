@@ -1,6 +1,52 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { DashboardEventFeed } from "@/components/dashboard-event-feed";
+import { SignOutButton } from "@/components/sign-out-button";
 import { getEnvStatus } from "@/lib/env";
 import { getServerSupabaseClient } from "@/lib/supabase";
+
+type DashboardEvent = {
+  id: string;
+  type: "calendar_event" | "reminder" | "note";
+  title: string;
+  description: string | null;
+  event_date: string | null;
+  created_at: string;
+  raw_note: string | null;
+  status: string | null;
+};
+
+async function getDashboardData() {
+  const envStatus = getEnvStatus();
+  const supabase = await getServerSupabaseClient();
+
+  if (!supabase) {
+    return { envStatus, connected: false, events: [] as DashboardEvent[], user: null };
+  }
+
+  const userResult = await supabase.auth.getUser();
+  const user = userResult.data.user ?? null;
+
+  if (!user) {
+    return { envStatus, connected: false, events: [] as DashboardEvent[], user: null };
+  }
+
+  const [{ data: userRow }, { data: events }] = await Promise.all([
+    supabase
+      .from("users")
+      .select("google_access_token, google_refresh_token")
+      .eq("id", user.id)
+      .maybeSingle(),
+    supabase.from("events").select("*").order("created_at", { ascending: false }),
+  ]);
+
+  return {
+    envStatus,
+    connected: Boolean(userRow?.google_access_token && userRow?.google_refresh_token),
+    events: (events ?? []) as DashboardEvent[],
+    user,
+  };
+}
 
 type DashboardPageProps = {
   searchParams?: Promise<{
@@ -10,33 +56,40 @@ type DashboardPageProps = {
 };
 
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
-  const envStatus = getEnvStatus();
-  const supabase = await getServerSupabaseClient();
-  const userResult = supabase ? await supabase.auth.getUser() : null;
-  const user = userResult?.data.user ?? null;
   const params = (await searchParams) ?? {};
   const googleStatus = params.google;
   const googleError = params.error;
+  const { envStatus, connected, events, user } = await getDashboardData();
+
+  if (!user) {
+    redirect("/login");
+  }
 
   return (
     <main className="dashboard-shell">
       <section className="dashboard-shell__header">
         <p className="section-kicker">Dashboard</p>
-        <h1 className="dashboard-title">Spark Phase 1 foundation</h1>
+        <h1 className="dashboard-title">Your routed notes, reminders, and calendar actions.</h1>
         <p className="dashboard-copy">
-          This shell is ready for auth and data wiring. Add your keys to
-          `.env.local`, run the Supabase migration, and the Phase 1 plumbing is
-          in place.
+          Spark keeps the note-taking habit lightweight, then shows the structured
+          outcomes in one place after each Shortcut run.
         </p>
+        <div className="dashboard-header-actions">
+          <Link className="secondary-button dashboard-action" href="/onboarding">
+            Open onboarding
+          </Link>
+          <Link className="primary-button dashboard-action" href="/onboarding/shortcut">
+            Install Shortcut
+          </Link>
+          <SignOutButton />
+        </div>
       </section>
 
       <section className="dashboard-shell__grid">
         <article className="status-panel">
           <h2>Auth status</h2>
-          <p>{user ? `Signed in as ${user.email}` : "No active session yet."}</p>
-          <Link className="primary-button" href="/login">
-            Open login
-          </Link>
+          <p>{`Signed in as ${user.email}`}</p>
+          <p>{`Ready to process notes for user ID ${user.id}.`}</p>
         </article>
 
         <article className="status-panel">
@@ -58,10 +111,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         <article className="status-panel">
           <h2>Supabase setup</h2>
           <p>
-            The SQL migration for `users`, `events`, and `api_calls` is included
-            and ready to run in your Supabase project.
+            Spark is now reading processed items from the `events` table and exposing
+            them through the authenticated `/api/events` route.
           </p>
-          <p>Next phases can build on this without reshaping the foundation.</p>
+          <p>Every routed note keeps the original `raw_note` for the later RAG phase.</p>
         </article>
 
         <article className="status-panel">
@@ -70,7 +123,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             Connect Google so Spark can create calendar events from routed
             notes.
           </p>
-          {googleStatus === "connected" ? (
+          {connected || googleStatus === "connected" ? (
             <p>Google Calendar is connected for this account.</p>
           ) : null}
           {googleStatus === "error" && googleError ? <p>{googleError}</p> : null}
@@ -79,6 +132,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           </Link>
         </article>
       </section>
+
+      <DashboardEventFeed initialEvents={events} />
     </main>
   );
 }

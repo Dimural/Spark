@@ -94,11 +94,11 @@ export default function HomePage() {
           </p>
 
           <div className="hero-actions">
-            <a className="primary-button" href="#preview">
-              Explore the concept
+            <a className="primary-button" href="/onboarding">
+              Start onboarding
             </a>
-            <a className="secondary-button" href="#how-it-works">
-              See how it flows
+            <a className="secondary-button" href="/dashboard">
+              Open dashboard
             </a>
           </div>
 
@@ -271,15 +271,14 @@ export default function HomePage() {
           <article>
             <h3>What is included right now?</h3>
             <p>
-              A complete UI-only marketing homepage that introduces the product
-              and its workflow.
+              Marketing, auth, onboarding, the Shortcut setup surface, and the
+              processed-items dashboard are now in place.
             </p>
           </article>
           <article>
             <h3>What is intentionally not built yet?</h3>
             <p>
-              Auth, onboarding, dashboard data, API routes, and the LangGraph
-              backend remain untouched in this pass.
+              CI hardening, richer mobile polish, and analytics are still pending.
             </p>
           </article>
           <article>
@@ -295,10 +294,10 @@ export default function HomePage() {
       <section className="cta-banner">
         <div>
           <span className="section-kicker">Next step</span>
-          <h2>Frontend foundation is ready for onboarding and dashboard pages.</h2>
+          <h2>The frontend flow now carries users from sign-in to Shortcut setup.</h2>
         </div>
-        <a className="primary-button" href="#top">
-          Back to top
+        <a className="primary-button" href="/onboarding">
+          Open onboarding
         </a>
       </section>
     </main>

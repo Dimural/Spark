@@ -37,7 +37,7 @@ function CallbackContent() {
           return;
         }
 
-        router.replace("/dashboard");
+        router.replace("/onboarding");
         return;
       }
 
@@ -53,7 +53,7 @@ function CallbackContent() {
           return;
         }
 
-        router.replace("/dashboard");
+        router.replace("/onboarding");
         return;
       }
 
