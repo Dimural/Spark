@@ -2,11 +2,21 @@ import Link from "next/link";
 import { getEnvStatus } from "@/lib/env";
 import { getServerSupabaseClient } from "@/lib/supabase";
 
-export default async function DashboardPage() {
+type DashboardPageProps = {
+  searchParams?: Promise<{
+    google?: string;
+    error?: string;
+  }>;
+};
+
+export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const envStatus = getEnvStatus();
   const supabase = await getServerSupabaseClient();
   const userResult = supabase ? await supabase.auth.getUser() : null;
   const user = userResult?.data.user ?? null;
+  const params = (await searchParams) ?? {};
+  const googleStatus = params.google;
+  const googleError = params.error;
 
   return (
     <main className="dashboard-shell">
@@ -52,6 +62,21 @@ export default async function DashboardPage() {
             and ready to run in your Supabase project.
           </p>
           <p>Next phases can build on this without reshaping the foundation.</p>
+        </article>
+
+        <article className="status-panel">
+          <h2>Google Calendar</h2>
+          <p>
+            Connect Google so Spark can create calendar events from routed
+            notes.
+          </p>
+          {googleStatus === "connected" ? (
+            <p>Google Calendar is connected for this account.</p>
+          ) : null}
+          {googleStatus === "error" && googleError ? <p>{googleError}</p> : null}
+          <Link className="primary-button" href="/api/auth/google">
+            Connect Google Calendar
+          </Link>
         </article>
       </section>
     </main>

@@ -1,3 +1,4 @@
 langchain-groq>=0.2.0
 langgraph>=0.2.60
 pytest>=8.3.0
+cryptography>=43.0.0
