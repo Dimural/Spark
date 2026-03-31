@@ -2,48 +2,51 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { DashboardEventFeed } from "@/components/dashboard-event-feed";
 import { SignOutButton } from "@/components/sign-out-button";
+import { getDashboardSnapshot } from "@/lib/dashboard";
 import { getEnvStatus } from "@/lib/env";
 import { getServerSupabaseClient } from "@/lib/supabase";
-
-type DashboardEvent = {
-  id: string;
-  type: "calendar_event" | "reminder" | "note";
-  title: string;
-  description: string | null;
-  event_date: string | null;
-  created_at: string;
-  raw_note: string | null;
-  status: string | null;
-};
 
 async function getDashboardData() {
   const envStatus = getEnvStatus();
   const supabase = await getServerSupabaseClient();
 
   if (!supabase) {
-    return { envStatus, connected: false, events: [] as DashboardEvent[], user: null };
+    return {
+      envStatus,
+      connected: false,
+      events: [],
+      summary: null,
+      user: null,
+    };
   }
 
   const userResult = await supabase.auth.getUser();
   const user = userResult.data.user ?? null;
 
   if (!user) {
-    return { envStatus, connected: false, events: [] as DashboardEvent[], user: null };
+    return {
+      envStatus,
+      connected: false,
+      events: [],
+      summary: null,
+      user: null,
+    };
   }
 
-  const [{ data: userRow }, { data: events }] = await Promise.all([
+  const [{ data: userRow }, snapshot] = await Promise.all([
     supabase
       .from("users")
       .select("google_access_token, google_refresh_token")
       .eq("id", user.id)
       .maybeSingle(),
-    supabase.from("events").select("*").order("created_at", { ascending: false }),
+    getDashboardSnapshot(supabase),
   ]);
 
   return {
     envStatus,
     connected: Boolean(userRow?.google_access_token && userRow?.google_refresh_token),
-    events: (events ?? []) as DashboardEvent[],
+    events: snapshot.events,
+    summary: snapshot.summary,
     user,
   };
 }
@@ -59,7 +62,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const params = (await searchParams) ?? {};
   const googleStatus = params.google;
   const googleError = params.error;
-  const { envStatus, connected, events, user } = await getDashboardData();
+  const { envStatus, connected, events, summary, user } = await getDashboardData();
 
   if (!user) {
     redirect("/login");
@@ -133,7 +136,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         </article>
       </section>
 
-      <DashboardEventFeed initialEvents={events} />
+      <DashboardEventFeed initialEvents={events} initialSummary={summary} />
     </main>
   );
 }

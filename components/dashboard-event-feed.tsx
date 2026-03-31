@@ -1,22 +1,26 @@
 "use client";
 
-import { startTransition, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { startTransition, useEffect, useState } from "react";
+import type { DashboardEvent, DashboardEventType, DashboardSummary } from "@/lib/dashboard";
 
-type EventType = "all" | "calendar_event" | "reminder" | "note";
-
-type DashboardEvent = {
-  id: string;
-  type: Exclude<EventType, "all">;
-  title: string;
-  description: string | null;
-  event_date: string | null;
-  created_at: string;
-  raw_note: string | null;
-  status: string | null;
-};
+type EventType = "all" | DashboardEventType;
 
 type DashboardEventFeedProps = {
   initialEvents: DashboardEvent[];
+  initialSummary: DashboardSummary | null;
+};
+
+type EventsResponse = {
+  success: boolean;
+  events?: DashboardEvent[];
+  error?: string;
+};
+
+type SummaryResponse = {
+  success: boolean;
+  summary?: DashboardSummary;
+  error?: string;
 };
 
 const filters: Array<{ label: string; value: EventType }> = [
@@ -28,7 +32,7 @@ const filters: Array<{ label: string; value: EventType }> = [
 
 function formatTimestamp(value: string | null) {
   if (!value) {
-    return "No scheduled time";
+    return "No recent activity";
   }
 
   const date = new Date(value);
@@ -43,6 +47,34 @@ function formatTimestamp(value: string | null) {
   }).format(date);
 }
 
+function formatRelativeTime(value: string | null) {
+  if (!value) {
+    return "Not yet";
+  }
+
+  const stamp = Date.parse(value);
+
+  if (Number.isNaN(stamp)) {
+    return value;
+  }
+
+  const deltaMs = stamp - Date.now();
+  const formatter = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+  const ranges: Array<[Intl.RelativeTimeFormatUnit, number]> = [
+    ["day", 24 * 60 * 60 * 1000],
+    ["hour", 60 * 60 * 1000],
+    ["minute", 60 * 1000],
+  ];
+
+  for (const [unit, unitMs] of ranges) {
+    if (Math.abs(deltaMs) >= unitMs || unit === "minute") {
+      return formatter.format(Math.round(deltaMs / unitMs), unit);
+    }
+  }
+
+  return "Just now";
+}
+
 function typeLabel(type: DashboardEvent["type"]) {
   if (type === "calendar_event") {
     return "Calendar event";
@@ -55,39 +87,66 @@ function typeLabel(type: DashboardEvent["type"]) {
   return "Note";
 }
 
-export function DashboardEventFeed({ initialEvents }: DashboardEventFeedProps) {
+async function getEvents(filter: EventType) {
+  const query = filter === "all" ? "/api/events" : `/api/events?type=${filter}`;
+  const response = await fetch(query, {
+    method: "GET",
+    cache: "no-store",
+  });
+  const payload = (await response.json()) as EventsResponse;
+
+  if (!response.ok || !payload.success) {
+    throw new Error(payload.error || "Unable to load events.");
+  }
+
+  return payload.events ?? [];
+}
+
+async function getSummary() {
+  const response = await fetch("/api/events/summary", {
+    method: "GET",
+    cache: "no-store",
+  });
+  const payload = (await response.json()) as SummaryResponse;
+
+  if (!response.ok || !payload.success || !payload.summary) {
+    throw new Error(payload.error || "Unable to load dashboard summary.");
+  }
+
+  return payload.summary;
+}
+
+function summaryChanged(previous: DashboardSummary | null, next: DashboardSummary) {
+  if (!previous) {
+    return true;
+  }
+
+  return JSON.stringify(previous) !== JSON.stringify(next);
+}
+
+export function DashboardEventFeed({
+  initialEvents,
+  initialSummary,
+}: DashboardEventFeedProps) {
   const [selectedFilter, setSelectedFilter] = useState<EventType>("all");
   const [events, setEvents] = useState(initialEvents);
+  const [summary, setSummary] = useState<DashboardSummary | null>(initialSummary);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
 
-    async function loadEvents() {
+    async function loadEventsForFilter() {
       setIsLoading(true);
       setError("");
 
-      const query =
-        selectedFilter === "all" ? "/api/events" : `/api/events?type=${selectedFilter}`;
-
       try {
-        const response = await fetch(query, {
-          method: "GET",
-          cache: "no-store",
-        });
-        const payload = (await response.json()) as {
-          success: boolean;
-          events?: DashboardEvent[];
-          error?: string;
-        };
-
-        if (!response.ok || !payload.success) {
-          throw new Error(payload.error || "Unable to load events.");
-        }
+        const nextEvents = await getEvents(selectedFilter);
 
         if (!cancelled) {
-          setEvents(payload.events ?? []);
+          setEvents(nextEvents);
         }
       } catch (requestError) {
         if (!cancelled) {
@@ -102,43 +161,134 @@ export function DashboardEventFeed({ initialEvents }: DashboardEventFeedProps) {
       }
     }
 
-    void loadEvents();
+    void loadEventsForFilter();
 
     return () => {
       cancelled = true;
     };
   }, [selectedFilter]);
 
-  const stats = useMemo(() => {
-    return initialEvents.reduce(
-      (accumulator, event) => {
-        accumulator[event.type] += 1;
-        return accumulator;
-      },
-      {
-        calendar_event: 0,
-        reminder: 0,
-        note: 0,
-      },
-    );
-  }, [initialEvents]);
+  useEffect(() => {
+    let cancelled = false;
+
+    async function refreshDashboard(quiet: boolean) {
+      if (!quiet) {
+        setIsRefreshing(true);
+      }
+
+      try {
+        const nextSummary = await getSummary();
+
+        if (cancelled) {
+          return;
+        }
+
+        const hasSummaryChanged = summaryChanged(summary, nextSummary);
+        const shouldRefreshEvents =
+          hasSummaryChanged ||
+          (selectedFilter === "all" && nextSummary.totalProcessed !== events.length);
+
+        if (hasSummaryChanged) {
+          setSummary(nextSummary);
+        }
+
+        if (shouldRefreshEvents) {
+          const nextEvents = await getEvents(selectedFilter);
+
+          if (!cancelled) {
+            setEvents(nextEvents);
+            setError("");
+          }
+        }
+      } catch (requestError) {
+        if (!quiet && !cancelled) {
+          setError(
+            requestError instanceof Error
+              ? requestError.message
+              : "Unable to refresh dashboard activity.",
+          );
+        }
+      } finally {
+        if (!quiet && !cancelled) {
+          setIsRefreshing(false);
+        }
+      }
+    }
+
+    const interval = window.setInterval(() => {
+      void refreshDashboard(true);
+    }, summary?.pendingProcessing ? 3000 : 10000);
+
+    void refreshDashboard(true);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [events.length, selectedFilter, summary]);
 
   return (
     <section className="dashboard-data-shell">
-      <div className="dashboard-overview">
-        <article className="dashboard-overview__card">
-          <span>Calendar events</span>
-          <strong>{stats.calendar_event}</strong>
+      <div className="dashboard-analytics-grid">
+        <article className="dashboard-overview__card dashboard-overview__card--spotlight">
+          <span>Total notes processed</span>
+          <strong>{summary?.totalProcessed ?? initialEvents.length}</strong>
+          <p>
+            {summary?.processedThisWeek ?? 0} routed in the last 7 days across notes,
+            reminders, and calendar actions.
+          </p>
         </article>
+
         <article className="dashboard-overview__card">
-          <span>Reminders</span>
-          <strong>{stats.reminder}</strong>
+          <span>Shortcut runs</span>
+          <strong>{summary?.shortcutRuns ?? 0}</strong>
+          <p>Every authenticated `/api/ingest-note` call is counted here for quick activity tracking.</p>
         </article>
+
         <article className="dashboard-overview__card">
-          <span>Saved notes</span>
-          <strong>{stats.note}</strong>
+          <span>Next scheduled item</span>
+          <strong>{formatRelativeTime(summary?.nextScheduledAt ?? null)}</strong>
+          <p>{formatTimestamp(summary?.nextScheduledAt ?? null)}</p>
+        </article>
+
+        <article className="dashboard-overview__card">
+          <span>Last processed</span>
+          <strong>{formatRelativeTime(summary?.latestProcessedAt ?? null)}</strong>
+          <p>{formatTimestamp(summary?.latestProcessedAt ?? null)}</p>
         </article>
       </div>
+
+      <div className="dashboard-breakdown">
+        <article className="dashboard-breakdown__card">
+          <span>Calendar events</span>
+          <strong>{summary?.byType.calendar_event ?? 0}</strong>
+        </article>
+        <article className="dashboard-breakdown__card">
+          <span>Reminders</span>
+          <strong>{summary?.byType.reminder ?? 0}</strong>
+        </article>
+        <article className="dashboard-breakdown__card">
+          <span>Notes</span>
+          <strong>{summary?.byType.note ?? 0}</strong>
+        </article>
+      </div>
+
+      {summary?.pendingProcessing ? (
+        <div className="dashboard-processing-indicator" role="status" aria-live="polite">
+          <div>
+            <p className="section-kicker">Processing</p>
+            <h3>Spark is handling your latest Shortcut run.</h3>
+            <p>
+              The dashboard is polling for the next routed item and will refresh
+              automatically when it lands.
+            </p>
+          </div>
+          <div className="dashboard-processing-indicator__meta">
+            <span>Last Shortcut activity</span>
+            <strong>{formatTimestamp(summary.latestShortcutRunAt)}</strong>
+          </div>
+        </div>
+      ) : null}
 
       <div className="dashboard-feed">
         <div className="dashboard-feed__toolbar">
@@ -170,15 +320,29 @@ export function DashboardEventFeed({ initialEvents }: DashboardEventFeedProps) {
         </div>
 
         {isLoading ? <p className="dashboard-feed__status">Loading latest items...</p> : null}
-        {error ? <p className="dashboard-feed__status dashboard-feed__status--error">{error}</p> : null}
+        {!isLoading && isRefreshing ? (
+          <p className="dashboard-feed__status">Refreshing activity…</p>
+        ) : null}
+        {error ? (
+          <p className="dashboard-feed__status dashboard-feed__status--error">{error}</p>
+        ) : null}
 
         {!isLoading && !error && events.length === 0 ? (
           <div className="dashboard-empty-state">
-            <h3>No items yet</h3>
+            <p className="dashboard-empty-state__eyebrow">No processed items yet</p>
+            <h3>Your dashboard fills itself after the first Shortcut run.</h3>
             <p>
-              Once you run the Shortcut, routed calendar events, reminders, and notes
-              will appear here.
+              Install the Shortcut, send one messy note from `Spark Inbox`, and Spark
+              will route it into a calendar event, reminder, or saved note here.
             </p>
+            <div className="dashboard-empty-state__actions">
+              <Link className="primary-button" href="/onboarding/shortcut">
+                Install Shortcut
+              </Link>
+              <Link className="secondary-button" href="/onboarding">
+                Review setup
+              </Link>
+            </div>
           </div>
         ) : null}
 

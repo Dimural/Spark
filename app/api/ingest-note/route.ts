@@ -76,6 +76,16 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Keep a lightweight record of Shortcut runs so the dashboard can show activity.
+  try {
+    await auth.supabase.from("api_calls").insert({
+      user_id: auth.user.id,
+      endpoint: "/api/ingest-note",
+    });
+  } catch {
+    // Dashboard analytics should not block note processing.
+  }
+
   try {
     const result = await runSparkAgent({
       raw_text: text,
