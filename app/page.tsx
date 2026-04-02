@@ -39,7 +39,7 @@ const useCases = [
 const outcomes = [
   "Apple Notes first",
   "Google Calendar connected",
-  "Email and SMS ready",
+  "Email reminders ready",
   "Private dashboard",
 ];
 

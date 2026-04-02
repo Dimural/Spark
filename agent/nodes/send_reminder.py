@@ -25,13 +25,6 @@ def send_reminder(
         text=message,
     )
 
-    sms_status = "skipped"
-    phone_number = user.get("phone") or user.get("phone_number")
-
-    if phone_number:
-        reminder_client.send_sms(to_number=phone_number, body_text=message)
-        sms_status = "sent"
-
     stored_event = supabase_client.insert_event(
         user_id=state["user_id"],
         event_type="reminder",
@@ -47,7 +40,6 @@ def send_reminder(
             "type": "reminder",
             "title": title,
             "email_id": email_result.get("id"),
-            "sms_status": sms_status,
             "event_id": stored_event.get("id"),
         }
     }

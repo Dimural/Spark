@@ -45,15 +45,10 @@ class FakeCalendar:
 class FakeReminder:
     def __init__(self):
         self.email_calls = []
-        self.sms_calls = []
 
     def send_email(self, **kwargs):
         self.email_calls.append(kwargs)
         return {"id": "email-123"}
-
-    def send_sms(self, **kwargs):
-        self.sms_calls.append(kwargs)
-        return {"sid": "sms-123"}
 
 
 def test_create_cal_event_refreshes_token_and_persists_event(monkeypatch):
@@ -102,7 +97,7 @@ def test_create_cal_event_refreshes_token_and_persists_event(monkeypatch):
     assert result["result"]["google_event_id"] == "google-123"
 
 
-def test_send_reminder_sends_email_and_skips_sms_without_phone():
+def test_send_reminder_sends_email_and_persists_event():
     supabase = FakeSupabase(
         user={"id": "user-1", "email": "user@example.com"},
         inserted_events=[],
@@ -124,9 +119,8 @@ def test_send_reminder_sends_email_and_skips_sms_without_phone():
     )
 
     assert reminder.email_calls[0]["to_email"] == "user@example.com"
-    assert reminder.sms_calls == []
     assert supabase.inserted_events[0]["event_type"] == "reminder"
-    assert result["result"]["sms_status"] == "skipped"
+    assert result["result"]["email_id"] == "email-123"
 
 
 def test_save_note_persists_raw_note_and_type():

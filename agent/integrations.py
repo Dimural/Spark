@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 import hashlib
 import json
 import os
@@ -242,9 +241,6 @@ class GoogleCalendarIntegration:
 class ReminderIntegration:
     def __init__(self) -> None:
         self.resend_api_key = _require_env("RESEND_API_KEY")
-        self.twilio_account_sid = os.getenv("TWILIO_ACCOUNT_SID", "").strip()
-        self.twilio_auth_token = os.getenv("TWILIO_AUTH_TOKEN", "").strip()
-        self.twilio_phone_number = os.getenv("TWILIO_PHONE_NUMBER", "").strip()
 
     def send_email(self, *, to_email: str, subject: str, text: str) -> dict[str, Any]:
         body = json.dumps(
@@ -261,35 +257,6 @@ class ReminderIntegration:
             headers={
                 "Authorization": f"Bearer {self.resend_api_key}",
                 "Content-Type": "application/json",
-            },
-            body=body,
-        )
-
-    def send_sms(self, *, to_number: str, body_text: str) -> dict[str, Any]:
-        if (
-            not self.twilio_account_sid
-            or not self.twilio_auth_token
-            or not self.twilio_phone_number
-        ):
-            raise RuntimeError("Twilio credentials are incomplete.")
-
-        auth = base64.b64encode(
-            f"{self.twilio_account_sid}:{self.twilio_auth_token}".encode("utf-8")
-        ).decode("utf-8")
-        body = parse.urlencode(
-            {
-                "To": to_number,
-                "From": self.twilio_phone_number,
-                "Body": body_text,
-            }
-        ).encode("utf-8")
-
-        return _request_json(
-            f"https://api.twilio.com/2010-04-01/Accounts/{self.twilio_account_sid}/Messages.json",
-            method="POST",
-            headers={
-                "Authorization": f"Basic {auth}",
-                "Content-Type": "application/x-www-form-urlencoded",
             },
             body=body,
         )
