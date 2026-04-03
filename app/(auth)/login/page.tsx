@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { getEnvStatus } from "@/lib/env";
 import { getBrowserSupabaseClient } from "@/lib/supabase-client";
 
@@ -10,7 +10,11 @@ export default function LoginPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [isPending, setIsPending] = useState(false);
-  const envStatus = useMemo(() => getEnvStatus(), []);
+  const [missingPublicEnv, setMissingPublicEnv] = useState<string[] | null>(null);
+
+  useEffect(() => {
+    setMissingPublicEnv(getEnvStatus().missingPublicSupabase);
+  }, []);
 
   async function handleMagicLink(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -114,11 +118,11 @@ export default function LoginPage() {
         {message ? <p className="auth-success">{message}</p> : null}
         {error ? <p className="auth-error">{error}</p> : null}
 
-        {envStatus.missingPublicSupabase.length > 0 ? (
+        {missingPublicEnv && missingPublicEnv.length > 0 ? (
           <div className="env-card">
             <h2>Missing public env</h2>
             <ul>
-              {envStatus.missingPublicSupabase.map((key) => (
+              {missingPublicEnv.map((key) => (
                 <li key={key}>{key}</li>
               ))}
             </ul>
