@@ -25,7 +25,7 @@ export default function LoginPage() {
 
     if (!supabase) {
       setError(
-        "Supabase environment variables are missing. Add them to .env.local before signing in.",
+        "Supabase public environment variables are not loaded in the running app. Verify .env.local uses NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY, then restart next dev.",
       );
       return;
     }
@@ -57,7 +57,7 @@ export default function LoginPage() {
 
     if (!supabase) {
       setError(
-        "Supabase environment variables are missing. Add them to .env.local before signing in.",
+        "Supabase public environment variables are not loaded in the running app. Verify .env.local uses NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY, then restart next dev.",
       );
       return;
     }
@@ -86,6 +86,10 @@ export default function LoginPage() {
         <p className="auth-copy">
           Phase 1 sets up Supabase Auth so the app is ready as soon as your
           keys are available.
+        </p>
+        <p className="auth-copy">
+          If you added `.env.local` after `next dev` was already running, restart
+          the dev server so the browser bundle picks up the `NEXT_PUBLIC_*` values.
         </p>
 
         <form className="auth-form" onSubmit={handleMagicLink}>
@@ -120,7 +124,11 @@ export default function LoginPage() {
 
         {missingPublicEnv && missingPublicEnv.length > 0 ? (
           <div className="env-card">
-            <h2>Missing public env</h2>
+            <h2>Missing public Supabase env</h2>
+            <p>
+              Next.js only exposes `NEXT_PUBLIC_*` values that were present when the
+              dev server started.
+            </p>
             <ul>
               {missingPublicEnv.map((key) => (
                 <li key={key}>{key}</li>

@@ -97,18 +97,24 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
         <article className="status-panel">
           <h2>Environment readiness</h2>
-          {envStatus.missingAll.length === 0 ? (
-            <p>All required environment variables are present.</p>
+          {envStatus.missingPublicSupabase.length === 0 ? (
+            <p>Supabase public environment variables are present.</p>
           ) : (
             <>
-              <p>Add these values to `.env.local` before enabling the full app:</p>
+              <p>Add these public Supabase values to `.env.local` before signing in:</p>
               <ul className="status-list">
-                {envStatus.missingAll.map((key) => (
+                {envStatus.missingPublicSupabase.map((key) => (
                   <li key={key}>{key}</li>
                 ))}
               </ul>
             </>
           )}
+          {envStatus.missingAll.length > 0 ? (
+            <p>
+              Other integrations are still unset, but they do not affect whether the
+              app can detect the public Supabase keys.
+            </p>
+          ) : null}
         </article>
 
         <article className="status-panel">

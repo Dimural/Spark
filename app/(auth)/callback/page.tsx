@@ -15,7 +15,9 @@ function CallbackContent() {
 
     if (!supabase) {
       setStatus("Missing Supabase keys.");
-      setError("Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local.");
+      setError(
+        "Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local, then restart next dev so the running app can read them.",
+      );
       return;
     }
 
