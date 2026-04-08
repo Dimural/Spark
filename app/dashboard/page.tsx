@@ -70,7 +70,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   return (
     <main className="dashboard-shell">
-      <section className="dashboard-shell__header">
+      <section className="dashboard-shell__header ui-fade-in">
         <p className="section-kicker">Dashboard</p>
         <h1 className="dashboard-title">Your routed notes, reminders, and calendar actions.</h1>
         <p className="dashboard-copy">
@@ -88,7 +88,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         </div>
       </section>
 
-      <section className="dashboard-shell__grid">
+      <section className="dashboard-shell__grid ui-fade-in ui-fade-in--2">
         <article className="status-panel">
           <h2>Auth status</h2>
           <p>{`Signed in as ${user.email}`}</p>

@@ -48,7 +48,7 @@ export default function HomePage() {
     <main className="page-shell">
       <div className="page-grid" />
 
-      <header className="site-header">
+      <header className="site-header ui-fade-in">
         <a className="brand" href="#top" aria-label="Spark home">
           <Image
             src="/spark_mark_dark.png"
@@ -72,7 +72,7 @@ export default function HomePage() {
         </a>
       </header>
 
-      <section className="hero" id="top">
+      <section className="hero ui-fade-in ui-fade-in--2" id="top">
         <div className="hero-copy">
           <div className="eyebrow">
             <span className="eyebrow-dot" />
@@ -109,7 +109,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="hero-panel">
+        <div className="hero-panel ui-fade-in ui-fade-in--3">
           <div className="panel-header">
             <div className="panel-dots" aria-hidden="true">
               <span />
@@ -155,7 +155,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="trust-strip" aria-label="Product highlights">
+      <section className="trust-strip ui-fade-in ui-fade-in--3" aria-label="Product highlights">
         <p>Built for the way real notes look before they are organized.</p>
         <div>
           <span>Apple Notes</span>
@@ -165,7 +165,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="section" id="how-it-works">
+      <section className="section ui-fade-in ui-fade-in--4" id="how-it-works">
         <div className="section-heading">
           <span className="section-kicker">Flow</span>
           <h2>Keep the habit. Remove the sorting.</h2>
@@ -186,7 +186,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="section split-section" id="why-spark">
+      <section className="section split-section ui-fade-in ui-fade-in--4" id="why-spark">
         <div className="section-heading section-heading--compact">
           <span className="section-kicker">Intent</span>
           <h2>Messy in. Structured out.</h2>
@@ -206,7 +206,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="section" id="preview">
+      <section className="section ui-fade-in ui-fade-in--4" id="preview">
         <div className="dashboard-card">
           <div className="dashboard-card__copy">
             <span className="section-kicker">Preview</span>
