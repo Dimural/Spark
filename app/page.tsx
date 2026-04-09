@@ -43,6 +43,24 @@ const outcomes = [
   "Private dashboard",
 ];
 
+const faqs = [
+  {
+    question: "Do I need to change how I take notes?",
+    answer:
+      "No. Write however you naturally think — messy, partial sentences, no structure needed. Spark figures out the intent.",
+  },
+  {
+    question: "What gets created automatically?",
+    answer:
+      "Calendar events for anything date-based, reminders for follow-ups, and saved notes for ideas or references. All visible in your dashboard.",
+  },
+  {
+    question: "Is my data private?",
+    answer:
+      "Yes. Your notes are processed and stored under your account only. Row-level security means no one else can see your data.",
+  },
+];
+
 export default function HomePage() {
   return (
     <main className="page-shell">
@@ -67,8 +85,8 @@ export default function HomePage() {
           <a href="#faq">FAQ</a>
         </nav>
 
-        <a className="header-cta" href="#preview">
-          View the UI
+        <a className="header-cta" href="/login">
+          Get started
         </a>
       </header>
 
@@ -94,11 +112,11 @@ export default function HomePage() {
           </p>
 
           <div className="hero-actions">
-            <a className="primary-button" href="/onboarding">
-              Start onboarding
+            <a className="primary-button" href="/login">
+              Get started
             </a>
-            <a className="secondary-button" href="/dashboard">
-              Open dashboard
+            <a className="secondary-button" href="#how-it-works">
+              See how it works
             </a>
           </div>
 
@@ -191,8 +209,8 @@ export default function HomePage() {
           <span className="section-kicker">Intent</span>
           <h2>Messy in. Structured out.</h2>
           <p>
-            The interface sells clarity without pretending the raw input needs
-            to be clean. That is the whole point of the product.
+            Write the way you actually think. Spark handles the classification
+            so nothing gets lost in a pile of unprocessed notes.
           </p>
         </div>
 
@@ -209,12 +227,12 @@ export default function HomePage() {
       <section className="section ui-fade-in ui-fade-in--4" id="preview">
         <div className="dashboard-card">
           <div className="dashboard-card__copy">
-            <span className="section-kicker">Preview</span>
-            <h2>A landing page that feels calm, premium, and capable.</h2>
+            <span className="section-kicker">Dashboard</span>
+            <h2>Every routed note, visible in one place.</h2>
             <p>
-              This first pass focuses entirely on the marketing surface: hero,
-              product framing, feature narrative, and a visual mock of Spark in
-              motion.
+              After each Shortcut run, your dashboard updates with what Spark
+              created — calendar events, reminders, and saved notes all in one
+              feed.
             </p>
           </div>
 
@@ -264,40 +282,26 @@ export default function HomePage() {
       <section className="section faq-section" id="faq">
         <div className="section-heading section-heading--compact">
           <span className="section-kicker">FAQ</span>
-          <h2>Frontend scope for this first build.</h2>
+          <h2>Common questions.</h2>
         </div>
 
         <div className="faq-grid">
-          <article>
-            <h3>What is included right now?</h3>
-            <p>
-              Marketing, auth, onboarding, the Shortcut setup surface, and the
-              processed-items dashboard are now in place.
-            </p>
-          </article>
-          <article>
-            <h3>What is intentionally not built yet?</h3>
-            <p>
-              CI hardening, richer mobile polish, and analytics are still pending.
-            </p>
-          </article>
-          <article>
-            <h3>What is the visual direction?</h3>
-            <p>
-              Clean and high-contrast, with soft glass panels, quiet motion, and
-              a restrained monochrome palette anchored by the Spark mark.
-            </p>
-          </article>
+          {faqs.map((item) => (
+            <article key={item.question}>
+              <h3>{item.question}</h3>
+              <p>{item.answer}</p>
+            </article>
+          ))}
         </div>
       </section>
 
       <section className="cta-banner">
         <div>
-          <span className="section-kicker">Next step</span>
-          <h2>The frontend flow now carries users from sign-in to Shortcut setup.</h2>
+          <span className="section-kicker">Get started</span>
+          <h2>Stop sorting. Start doing.</h2>
         </div>
-        <a className="primary-button" href="/onboarding">
-          Open onboarding
+        <a className="primary-button" href="/login">
+          Create your account
         </a>
       </section>
     </main>

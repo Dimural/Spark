@@ -3,34 +3,20 @@ import { redirect } from "next/navigation";
 import { DashboardEventFeed } from "@/components/dashboard-event-feed";
 import { SignOutButton } from "@/components/sign-out-button";
 import { getDashboardSnapshot } from "@/lib/dashboard";
-import { getEnvStatus } from "@/lib/env";
 import { getServerSupabaseClient } from "@/lib/supabase";
 
 async function getDashboardData() {
-  const envStatus = getEnvStatus();
   const supabase = await getServerSupabaseClient();
 
   if (!supabase) {
-    return {
-      envStatus,
-      connected: false,
-      events: [],
-      summary: null,
-      user: null,
-    };
+    return { connected: false, events: [], summary: null, user: null };
   }
 
   const userResult = await supabase.auth.getUser();
   const user = userResult.data.user ?? null;
 
   if (!user) {
-    return {
-      envStatus,
-      connected: false,
-      events: [],
-      summary: null,
-      user: null,
-    };
+    return { connected: false, events: [], summary: null, user: null };
   }
 
   const [{ data: userRow }, snapshot] = await Promise.all([
@@ -43,7 +29,6 @@ async function getDashboardData() {
   ]);
 
   return {
-    envStatus,
     connected: Boolean(userRow?.google_access_token && userRow?.google_refresh_token),
     events: snapshot.events,
     summary: snapshot.summary,
@@ -62,7 +47,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const params = (await searchParams) ?? {};
   const googleStatus = params.google;
   const googleError = params.error;
-  const { envStatus, connected, events, summary, user } = await getDashboardData();
+  const { connected, events, summary, user } = await getDashboardData();
 
   if (!user) {
     redirect("/login");
@@ -90,54 +75,24 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
       <section className="dashboard-shell__grid ui-fade-in ui-fade-in--2">
         <article className="status-panel">
-          <h2>Auth status</h2>
-          <p>{`Signed in as ${user.email}`}</p>
-          <p>{`Ready to process notes for user ID ${user.id}.`}</p>
-        </article>
-
-        <article className="status-panel">
-          <h2>Environment readiness</h2>
-          {envStatus.missingPublicSupabase.length === 0 ? (
-            <p>Supabase public environment variables are present.</p>
-          ) : (
-            <>
-              <p>Add these public Supabase values to `.env.local` before signing in:</p>
-              <ul className="status-list">
-                {envStatus.missingPublicSupabase.map((key) => (
-                  <li key={key}>{key}</li>
-                ))}
-              </ul>
-            </>
-          )}
-          {envStatus.missingAll.length > 0 ? (
-            <p>
-              Other integrations are still unset, but they do not affect whether the
-              app can detect the public Supabase keys.
-            </p>
-          ) : null}
-        </article>
-
-        <article className="status-panel">
-          <h2>Supabase setup</h2>
-          <p>
-            Spark is now reading processed items from the `events` table and exposing
-            them through the authenticated `/api/events` route.
-          </p>
-          <p>Every routed note keeps the original `raw_note` for the later RAG phase.</p>
+          <h2>Account</h2>
+          <p>{user.email}</p>
         </article>
 
         <article className="status-panel">
           <h2>Google Calendar</h2>
           <p>
-            Connect Google so Spark can create calendar events from routed
-            notes.
+            {connected || googleStatus === "connected"
+              ? "Google Calendar is connected."
+              : "Connect Google so Spark can create calendar events from your notes."}
           </p>
-          {connected || googleStatus === "connected" ? (
-            <p>Google Calendar is connected for this account.</p>
+          {googleStatus === "error" && googleError ? (
+            <p className="auth-error">{googleError}</p>
           ) : null}
-          {googleStatus === "error" && googleError ? <p>{googleError}</p> : null}
           <Link className="primary-button" href="/api/auth/google">
-            Connect Google Calendar
+            {connected || googleStatus === "connected"
+              ? "Reconnect Google Calendar"
+              : "Connect Google Calendar"}
           </Link>
         </article>
       </section>

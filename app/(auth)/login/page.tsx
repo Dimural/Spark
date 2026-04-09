@@ -1,8 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
-import { getEnvStatus } from "@/lib/env";
+import { FormEvent, useState } from "react";
 import { getBrowserSupabaseClient } from "@/lib/supabase-client";
 
 type AuthMode = "signin" | "signup";
@@ -14,11 +12,6 @@ export default function LoginPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [isPending, setIsPending] = useState(false);
-  const [missingPublicEnv, setMissingPublicEnv] = useState<string[] | null>(null);
-
-  useEffect(() => {
-    setMissingPublicEnv(getEnvStatus().missingPublicSupabase);
-  }, []);
 
   function resetState() {
     setMessage("");
@@ -32,9 +25,7 @@ export default function LoginPage() {
     const supabase = getBrowserSupabaseClient();
 
     if (!supabase) {
-      setError(
-        "Supabase public environment variables are not loaded in the running app. Verify .env.local uses NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY, then restart next dev.",
-      );
+      setError("Unable to connect. Please try again later.");
       return;
     }
 
@@ -81,9 +72,7 @@ export default function LoginPage() {
     const supabase = getBrowserSupabaseClient();
 
     if (!supabase) {
-      setError(
-        "Supabase public environment variables are not loaded in the running app. Verify .env.local uses NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY, then restart next dev.",
-      );
+      setError("Unable to connect. Please try again later.");
       return;
     }
 
@@ -168,25 +157,6 @@ export default function LoginPage() {
 
         {message ? <p className="auth-success">{message}</p> : null}
         {error ? <p className="auth-error">{error}</p> : null}
-
-        {missingPublicEnv && missingPublicEnv.length > 0 ? (
-          <div className="env-card">
-            <h2>Missing public Supabase env</h2>
-            <p>
-              Next.js only exposes `NEXT_PUBLIC_*` values that were present when the
-              dev server started.
-            </p>
-            <ul>
-              {missingPublicEnv.map((key) => (
-                <li key={key}>{key}</li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-
-        <Link className="auth-link" href="/onboarding">
-          Continue to onboarding
-        </Link>
       </section>
     </main>
   );
