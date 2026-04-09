@@ -5,8 +5,12 @@ import { FormEvent, useEffect, useState } from "react";
 import { getEnvStatus } from "@/lib/env";
 import { getBrowserSupabaseClient } from "@/lib/supabase-client";
 
+type AuthMode = "signin" | "signup";
+
 export default function LoginPage() {
+  const [mode, setMode] = useState<AuthMode>("signin");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [isPending, setIsPending] = useState(false);
@@ -16,10 +20,14 @@ export default function LoginPage() {
     setMissingPublicEnv(getEnvStatus().missingPublicSupabase);
   }, []);
 
-  async function handleMagicLink(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function resetState() {
     setMessage("");
     setError("");
+  }
+
+  async function handlePasswordAuth(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    resetState();
 
     const supabase = getBrowserSupabaseClient();
 
@@ -32,11 +40,29 @@ export default function LoginPage() {
 
     setIsPending(true);
 
-    const { error: signInError } = await supabase.auth.signInWithOtp({
+    if (mode === "signup") {
+      const { error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/callback`,
+        },
+      });
+
+      setIsPending(false);
+
+      if (signUpError) {
+        setError(signUpError.message);
+        return;
+      }
+
+      setMessage("Account created! Check your email to confirm your address, then sign in.");
+      return;
+    }
+
+    const { error: signInError } = await supabase.auth.signInWithPassword({
       email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/callback`,
-      },
+      password,
     });
 
     setIsPending(false);
@@ -46,12 +72,11 @@ export default function LoginPage() {
       return;
     }
 
-    setMessage("Magic link sent. Check your inbox to continue.");
+    window.location.href = "/onboarding";
   }
 
   async function handleGoogleSignIn() {
-    setMessage("");
-    setError("");
+    resetState();
 
     const supabase = getBrowserSupabaseClient();
 
@@ -78,21 +103,15 @@ export default function LoginPage() {
     }
   }
 
+  const isSignUp = mode === "signup";
+
   return (
     <main className="auth-shell">
       <section className="auth-card">
         <p className="section-kicker">Auth</p>
-        <h1 className="auth-title">Sign in to Spark</h1>
-        <p className="auth-copy">
-          Phase 1 sets up Supabase Auth so the app is ready as soon as your
-          keys are available.
-        </p>
-        <p className="auth-copy">
-          If you added `.env.local` after `next dev` was already running, restart
-          the dev server so the browser bundle picks up the `NEXT_PUBLIC_*` values.
-        </p>
+        <h1 className="auth-title">{isSignUp ? "Create your account" : "Sign in to Spark"}</h1>
 
-        <form className="auth-form" onSubmit={handleMagicLink}>
+        <form className="auth-form" onSubmit={handlePasswordAuth}>
           <label className="auth-label" htmlFor="email">
             Email address
           </label>
@@ -105,8 +124,21 @@ export default function LoginPage() {
             onChange={(event) => setEmail(event.target.value)}
             required
           />
+          <label className="auth-label" htmlFor="password">
+            Password
+          </label>
+          <input
+            id="password"
+            className="auth-input"
+            type="password"
+            placeholder={isSignUp ? "Choose a password" : "Your password"}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            required
+            minLength={isSignUp ? 6 : undefined}
+          />
           <button className="primary-button" type="submit" disabled={isPending}>
-            {isPending ? "Sending..." : "Send magic link"}
+            {isPending ? "Please wait..." : isSignUp ? "Create account" : "Sign in"}
           </button>
         </form>
 
@@ -118,6 +150,21 @@ export default function LoginPage() {
         >
           Continue with Google
         </button>
+
+        <p className="auth-copy" style={{ textAlign: "center", marginTop: "1rem" }}>
+          {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
+          <button
+            className="auth-link"
+            type="button"
+            style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
+            onClick={() => {
+              resetState();
+              setMode(isSignUp ? "signin" : "signup");
+            }}
+          >
+            {isSignUp ? "Sign in" : "Sign up"}
+          </button>
+        </p>
 
         {message ? <p className="auth-success">{message}</p> : null}
         {error ? <p className="auth-error">{error}</p> : null}
