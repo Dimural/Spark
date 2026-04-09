@@ -24,7 +24,12 @@ export function getMissingEnvKeys(keys: readonly string[] = requiredEnvKeys) {
 }
 
 export function hasPublicSupabaseEnv() {
-  return getMissingEnvKeys(publicSupabaseEnvKeys).length === 0;
+  // Next.js only inlines NEXT_PUBLIC_* with direct dot-notation access;
+  // dynamic process.env[key] lookups resolve to undefined on the client.
+  return (
+    !!process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() &&
+    !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim()
+  );
 }
 
 export function hasAllRequiredEnv() {
